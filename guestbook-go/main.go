@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codegangsta/negroni"
+	"github.com/urfave/negroni/v3"
 	"github.com/gorilla/mux"
 	"github.com/xyproto/simpleredis/v2"
 )

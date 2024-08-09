@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.10.0
-RUN go get github.com/codegangsta/negroni \
-           github.com/gorilla/mux \
-           github.com/xyproto/simpleredis/v2
+FROM golang:1.22.0
 WORKDIR /app
+ADD ./go.mod .
+RUN go get github.com/urfave/negroni/v3@v3.1.1 \
+           github.com/gorilla/mux@v1.8.1 \
+           github.com/xyproto/simpleredis/v2@v2.6.5
 ADD ./main.go .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
