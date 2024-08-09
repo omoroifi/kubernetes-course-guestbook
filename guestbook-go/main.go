@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"fmt"
 	"os"
 	"strings"
 
@@ -28,13 +29,12 @@ import (
 )
 
 var (
-	masterPool *simpleredis.ConnectionPool
-	replicaPool  *simpleredis.ConnectionPool
+	redisPool *simpleredis.ConnectionPool
 )
 
 func ListRangeHandler(rw http.ResponseWriter, req *http.Request) {
 	key := mux.Vars(req)["key"]
-	list := simpleredis.NewList(replicaPool, key)
+	list := simpleredis.NewList(redisPool, key)
 	members := HandleError(list.GetAll()).([]string)
 	membersJSON := HandleError(json.MarshalIndent(members, "", "  ")).([]byte)
 	rw.Write(membersJSON)
@@ -43,13 +43,13 @@ func ListRangeHandler(rw http.ResponseWriter, req *http.Request) {
 func ListPushHandler(rw http.ResponseWriter, req *http.Request) {
 	key := mux.Vars(req)["key"]
 	value := mux.Vars(req)["value"]
-	list := simpleredis.NewList(masterPool, key)
+	list := simpleredis.NewList(redisPool, key)
 	HandleError(nil, list.Add(value))
 	ListRangeHandler(rw, req)
 }
 
 func InfoHandler(rw http.ResponseWriter, req *http.Request) {
-	info := HandleError(masterPool.Get(0).Do("INFO")).([]byte)
+	info := HandleError(redisPool.Get(0).Do("INFO")).([]byte)
 	rw.Write(info)
 }
 
@@ -74,10 +74,16 @@ func HandleError(result interface{}, err error) (r interface{}) {
 }
 
 func main() {
-	masterPool = simpleredis.NewConnectionPoolHost("redis-master:6379")
-	defer masterPool.Close()
-	replicaPool = simpleredis.NewConnectionPoolHost("redis-replica:6379")
-	defer replicaPool.Close()
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPort := os.Getenv("REDIS_PORT")
+	redisPassword, redisPasswordPresent := os.LookupEnv("REDIS_PASSWORD")
+	redisUrl := fmt.Sprintf("%s:%s", redisHost, redisPort)
+	if redisPasswordPresent {
+		redisUrl = fmt.Sprintf("%s@%s:%s", redisPassword, redisHost, redisPort)
+	}
+
+	redisPool = simpleredis.NewConnectionPoolHost(redisUrl)
+	defer redisPool.Close()
 
 	r := mux.NewRouter()
 	r.Path("/lrange/{key}").Methods("GET").HandlerFunc(ListRangeHandler)
