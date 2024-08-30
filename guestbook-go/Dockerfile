@@ -21,7 +21,7 @@ RUN go get github.com/urfave/negroni/v3@v3.1.1 \
 ADD ./main.go .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
-FROM scratch
+FROM alpine:3.20.2
 WORKDIR /app
 COPY --from=0 /app/main .
 COPY ./public/index.html public/index.html
